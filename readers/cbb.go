@@ -44,10 +44,10 @@ func (a *cbcAuxReader) cbcAuxRead(b *bytes.Reader) {
 	}
 }
 
-func ReadCBB(fp string) (dat1D map[string][]float64, dat2D map[string][][]float64) {
+func ReadCBB(fp string) (dat1D map[string][]float64, dat2D map[string]map[int][]float64) {
 	bflx := mmio.OpenBinary(fp)
 	dat1D = make(map[string][]float64)
-	dat2D = make(map[string][][]float64)
+	dat2D = make(map[string]map[int][]float64)
 
 	for {
 		h := cbcHreader{}
@@ -72,7 +72,7 @@ func ReadCBB(fp string) (dat1D map[string][]float64, dat2D map[string][][]float6
 			a := cbcAuxReader{}
 			a.cbcAuxRead(bflx)
 			nd := int(a.NDAT)
-			auxtext := make([]string, nd)
+			auxtext := make([]string, nd-1)
 			for i := 0; i < nd-1; i++ {
 				var b1 [16]byte
 				if err := binary.Read(bflx, binary.LittleEndian, &b1); err != nil {
@@ -84,7 +84,7 @@ func ReadCBB(fp string) (dat1D map[string][]float64, dat2D map[string][][]float6
 			if err := binary.Read(bflx, binary.LittleEndian, &nlist); err != nil {
 				log.Fatalln("Fatal error: NLIST read failed: ", err)
 			}
-			d2D := make([][]float64, nlist)
+			d2D := make(map[int][]float64, nlist)
 			for i := 0; i < int(nlist); i++ {
 				var id1, id2 int32
 				if err := binary.Read(bflx, binary.LittleEndian, &id1); err != nil {

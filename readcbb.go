@@ -9,8 +9,8 @@ import (
 func readCBB(fp string, jaxr []readers.JAxr, nprims int) (pflx [][]float64, pqw map[int]float64) {
 	dat1D, dat2D := readers.ReadCBB(fp)
 
+	pflx = make([][]float64, nprims)
 	if val, ok := dat1D["FLOW-JA-FACE"]; ok {
-		pflx = make([][]float64, nprims)
 		for i, ja := range jaxr {
 			pflx[ja.From] = append(pflx[ja.From], val[i])
 		}
@@ -35,12 +35,11 @@ func readCBB(fp string, jaxr []readers.JAxr, nprims int) (pflx [][]float64, pqw 
 	// 	}
 	// }
 	if val, ok := dat2D["RCH"]; ok {
-		panic("to fix, harcoded to left-up-right-down-bottom-top scheme")
 		for i, v := range val {
 			if len(v) > 1 {
 				log.Fatalln("MODFLOW CBC read error: RCH given with greater than 1 NDAT")
 			}
-			pflx[i][5] = v[0]
+			pflx[i] = append(pflx[i], v[0])
 		}
 	}
 

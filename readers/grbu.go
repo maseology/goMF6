@@ -34,7 +34,7 @@ func ReadGRBU(buf *bytes.Reader) ([]*mmaths.Prism, [][]int, []JAxr) {
 	g.read(buf)
 
 	nc, nja := int(g.NODES), int(g.NJA)
-	nvert := 4 * nc //////////////////////////////  HARD-CODED: for rectilinear cells only //////////////////////////////
+	nvert := 4 * nc /////////////////////////////////////////  HARD-CODED: assuming the use of rectilinear cells /////////////////////////////////////////
 	top, botm := make([]float64, nc), make([]float64, nc)
 	if err := binary.Read(buf, binary.LittleEndian, top); err != nil {
 		panic(err)
@@ -43,11 +43,14 @@ func ReadGRBU(buf *bytes.Reader) ([]*mmaths.Prism, [][]int, []JAxr) {
 		panic(err)
 	}
 
-	ia, ja, icelltype := make([]int32, nc+1), make([]int32, nja), make([]int32, nc)
+	ia, ja, idomain, icelltype := make([]int32, nc+1), make([]int32, nja), make([]int32, nc), make([]int32, nc)
 	if err := binary.Read(buf, binary.LittleEndian, ia); err != nil { // For each cell n, the number of cell connections plus one.
 		panic(err)
 	}
 	if err := binary.Read(buf, binary.LittleEndian, ja); err != nil { // For each cell n a list of connected m cells.
+		panic(err)
+	}
+	if err := binary.Read(buf, binary.LittleEndian, idomain); err != nil { // integer variable that defines if a cell is convertible or confined -- A value of zero indicates that the cell is confined. A nonzero value indicates that the cell is convertible.
 		panic(err)
 	}
 	if err := binary.Read(buf, binary.LittleEndian, icelltype); err != nil { // integer variable that defines if a cell is convertible or confined -- A value of zero indicates that the cell is confined. A nonzero value indicates that the cell is convertible.
@@ -87,7 +90,7 @@ func ReadGRBU(buf *bytes.Reader) ([]*mmaths.Prism, [][]int, []JAxr) {
 	// 2. CREATE PRISMS AND CONNECTIVITY
 	prsms := func() []*mmaths.Prism {
 		prsms, njavert32 := make([]*mmaths.Prism, nc), int32(njavert)-1
-		for i := 0; i < nc; i++ {
+		for i := range nc {
 			i0, i1 := iavert[i]-1, njavert32
 			if i < nc-1 {
 				i1 = iavert[i+1] - 1
@@ -114,10 +117,10 @@ func ReadGRBU(buf *bytes.Reader) ([]*mmaths.Prism, [][]int, []JAxr) {
 		nc := int(g.NODES)
 		tp := make([][]int, nc)
 		jaxr, cja := make([]JAxr, nja), 0
-		for i := 0; i < nc; i++ {
+		for i := range nc {
 			a := ja[ia[i]-1 : ia[i+1]-1]
-			tpt := make([]int, len(a)-1) ////////////////////////  HARD-CODED: NOT DOING: //[]int{-1, -1, -1, -1, -1, -1} // initialize, [CW laterals]-bottom-top  (ex. left-up-right-down-bottom-top)
-			for j := 0; j < len(a); j++ {
+			tpt := make([]int, len(a)-1)
+			for j := range len(a) {
 				if j > 0 {
 					tpt[j-1] = int(a[j]) - 1
 				}

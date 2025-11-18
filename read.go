@@ -24,7 +24,7 @@ func ReadMF6(fprfx string) MF6 {
 		if _, ok := mmio.FileExists(fpcbc); !ok {
 			fpcbc = fmt.Sprintf("%s.flx", fprfx)
 			if _, ok := mmio.FileExists(fpcbc); !ok {
-				panic("")
+				panic("ReadMODFLOW: not all required MF6 files found")
 			}
 		}
 	}
@@ -46,6 +46,8 @@ func ReadMF6(fprfx string) MF6 {
 				for i, vv := range v {
 					if vv < mfpset[i].Top {
 						mfpset[i].H0 = vv
+					} else {
+						mfpset[i].H0 = mfpset[i].Top
 					}
 				}
 			}
@@ -53,9 +55,9 @@ func ReadMF6(fprfx string) MF6 {
 	}()
 
 	return MF6{
-		prsms: mfpset,
-		qw:    pqw,
-		zw: func() map[int]complex128 {
+		Prsms: mfpset,
+		Qw:    pqw,
+		Zw: func() map[int]complex128 {
 			zc := make(map[int]complex128, len(pqw))
 			for k := range pqw {
 				zc[k] = mfpset[k].Centroid()

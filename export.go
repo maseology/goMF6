@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"io/ioutil"
 	"log"
+	"os"
 	"sort"
 	"time"
 )
@@ -15,8 +15,8 @@ func (mf6 *MF6) ExportToVTK(filepath string, vertExag float64) {
 	// collect cell ids, building flow field
 	fmt.Println(" exporting VTK flow field..")
 	nprsm, cids := func() (int, []int) {
-		cids, ii := make([]int, len(mf6.prsms)), 0
-		for i := range mf6.prsms {
+		cids, ii := make([]int, len(mf6.Prsms)), 0
+		for i := range mf6.Prsms {
 			cids[ii] = i
 			ii++
 		}
@@ -39,7 +39,7 @@ func (mf6 *MF6) ExportToVTK(filepath string, vertExag float64) {
 	v, vxr, nvert := func() (map[int][]float64, map[int][]int, int) {
 		v, vxr, cnt := make(map[int][]float64), make(map[int][]int), 0
 		for _, i := range cids {
-			p, s1 := mf6.prsms[i], make([]int, 0)
+			p, s1 := mf6.Prsms[i], make([]int, 0)
 			for _, c := range p.Z {
 				v[cnt] = []float64{real(c), imag(c), p.Top * vertExag}
 				s1 = append(s1, cnt)
@@ -65,7 +65,7 @@ func (mf6 *MF6) ExportToVTK(filepath string, vertExag float64) {
 	binary.Write(buf, endi, []byte("DATASET UNSTRUCTURED_GRID\n"))
 
 	binary.Write(buf, endi, []byte(fmt.Sprintf("POINTS %d float\n", nvert)))
-	for i := 0; i < nvert; i++ {
+	for i := range nvert {
 		binary.Write(buf, endi, float32(v[i][0]))
 		binary.Write(buf, endi, float32(v[i][1]))
 		binary.Write(buf, endi, float32(v[i][2]))
@@ -73,7 +73,7 @@ func (mf6 *MF6) ExportToVTK(filepath string, vertExag float64) {
 
 	binary.Write(buf, endi, []byte(fmt.Sprintf("\nCELLS %d %d\n", nprsm, nprsm+nvert)))
 	for _, i := range cids {
-		binary.Write(buf, endi, int32(len(mf6.prsms[i].Z)*2))
+		binary.Write(buf, endi, int32(len(mf6.Prsms[i].Z)*2))
 		for _, nid := range vxr[i] {
 			binary.Write(buf, endi, int32(nid))
 		}
@@ -81,7 +81,7 @@ func (mf6 *MF6) ExportToVTK(filepath string, vertExag float64) {
 
 	binary.Write(buf, endi, []byte(fmt.Sprintf("\nCELL_TYPES %d\n", nprsm)))
 	for _, i := range cids {
-		switch len(mf6.prsms[i].Z) {
+		switch len(mf6.Prsms[i].Z) {
 		case 0, 1, 2:
 			log.Fatalf("ExportVTK error: invalid prism shape")
 		case 3:
@@ -99,27 +99,27 @@ func (mf6 *MF6) ExportToVTK(filepath string, vertExag float64) {
 
 	// cell index
 	binary.Write(buf, endi, []byte(fmt.Sprintf("\nCELL_DATA %d\n", nprsm)))
-	binary.Write(buf, endi, []byte(fmt.Sprintf("SCALARS cellID int32\n")))
-	binary.Write(buf, endi, []byte(fmt.Sprintf("LOOKUP_TABLE default\n")))
+	binary.Write(buf, endi, []byte("SCALARS cellID int32\n"))
+	binary.Write(buf, endi, []byte("LOOKUP_TABLE default\n"))
 	for _, i := range cids {
 		binary.Write(buf, endi, int32(i))
 	}
 
 	// saturation
-	binary.Write(buf, endi, []byte(fmt.Sprintf("SCALARS saturation float\n")))
-	binary.Write(buf, endi, []byte(fmt.Sprintf("LOOKUP_TABLE default\n")))
+	binary.Write(buf, endi, []byte("SCALARS saturation float\n"))
+	binary.Write(buf, endi, []byte("LOOKUP_TABLE default\n"))
 	for _, i := range cids {
-		binary.Write(buf, endi, float32(mf6.prsms[i].Saturation()))
+		binary.Write(buf, endi, float32(mf6.Prsms[i].Saturation()))
 	}
 
 	// // mean flux
-	// binary.Write(buf, endi, []byte(fmt.Sprintf("\nVECTORS Vcentroid double\n")))
+	// binary.Write(buf, endi, []byte("\nVECTORS Vcentroid double\n"))
 	// for _, i := range cids {
-	// 	binary.Write(buf, endi, mf6.prsms[i].Qcentroid())
+	// 	binary.Write(buf, endi, mf6.Prsms[i].Qcentroid())
 	// }
 
 	// write to file
-	if err := ioutil.WriteFile(filepath, buf.Bytes(), 0644); err != nil {
-		log.Fatalf("ioutil.WriteFile failed: %v", err)
+	if err := os.WriteFile(filepath, buf.Bytes(), 0644); err != nil {
+		log.Fatalf("os.WriteFile failed: %v", err)
 	}
 }
