@@ -39,12 +39,12 @@ func ReadDependentVariable(fp string) map[string][]float64 {
 		}
 
 		txt := strings.TrimSpace(string(h.TEXT[:]))
-		nc := int(h.NROW * h.NCOL * h.ILAY)
+		nc := int(h.NROW * h.NCOL)
 		m2 := make([]float64, nc)
 		if err := binary.Read(bflx, binary.LittleEndian, m2); err != nil {
 			panic(err)
 		}
-		m1[txt] = m2
+		m1[txt] = append(m1[txt], m2...)
 		// // fmt.Printf("Layer %d; KSTP %d; KPER %d: %s\n", h.ILAY, h.KPER, h.KSTP, txt)
 		// m2, c := make(map[int]float64), int(h.ILAY-1)*int(h.NROW*h.NCOL)
 		// for i := 0; i < int(h.NROW); i++ {

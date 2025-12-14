@@ -12,7 +12,7 @@ import (
 	"github.com/maseology/mmio"
 )
 
-func readGRB(fp string) ([]*mmaths.Prism, [][]int, []readers.JAxr) {
+func readGRB(fp string) ([]*mmaths.Prism, [][]int, []readers.JAxr, []int, []int) {
 	buf := mmio.OpenBinary(fp)
 	var btyp, bver [50]byte
 	if err := binary.Read(buf, binary.LittleEndian, &btyp); err != nil {
@@ -35,7 +35,7 @@ func readGRB(fp string) ([]*mmaths.Prism, [][]int, []readers.JAxr) {
 		return readers.ReadGRBU(buf)
 	default:
 		log.Fatalf("GRB type '%s' currently not supported", ttyp)
-		return nil, nil, nil
+		return nil, nil, nil, nil, nil
 	}
 }
 

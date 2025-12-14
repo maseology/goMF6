@@ -3,6 +3,7 @@ package readers
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"io"
 	"log"
 
@@ -27,7 +28,7 @@ func (g *grbuHreader) read(b *bytes.Reader) bool {
 	return false
 }
 
-func ReadGRBU(buf *bytes.Reader) ([]*mmaths.Prism, [][]int, []JAxr) {
+func ReadGRBU(buf *bytes.Reader) ([]*mmaths.Prism, [][]int, []JAxr, []int, []int) {
 
 	// 1. READ DATA
 	g := grbuHreader{}
@@ -43,18 +44,23 @@ func ReadGRBU(buf *bytes.Reader) ([]*mmaths.Prism, [][]int, []JAxr) {
 		panic(err)
 	}
 
-	ia, ja, idomain, icelltype := make([]int32, nc+1), make([]int32, nja), make([]int32, nc), make([]int32, nc)
+	ia, ja, idomain32, icelltype32 := make([]int32, nc+1), make([]int32, nja), make([]int32, nc), make([]int32, nc)
 	if err := binary.Read(buf, binary.LittleEndian, ia); err != nil { // For each cell n, the number of cell connections plus one.
 		panic(err)
 	}
 	if err := binary.Read(buf, binary.LittleEndian, ja); err != nil { // For each cell n a list of connected m cells.
 		panic(err)
 	}
-	if err := binary.Read(buf, binary.LittleEndian, idomain); err != nil { // integer variable that defines if a cell is convertible or confined -- A value of zero indicates that the cell is confined. A nonzero value indicates that the cell is convertible.
+	if err := binary.Read(buf, binary.LittleEndian, idomain32); err != nil { // integer variable that defines if a cell is convertible or confined -- A value of zero indicates that the cell is confined. A nonzero value indicates that the cell is convertible.
 		panic(err)
 	}
-	if err := binary.Read(buf, binary.LittleEndian, icelltype); err != nil { // integer variable that defines if a cell is convertible or confined -- A value of zero indicates that the cell is confined. A nonzero value indicates that the cell is convertible.
+	if err := binary.Read(buf, binary.LittleEndian, icelltype32); err != nil { // integer variable that defines if a cell is convertible or confined -- A value of zero indicates that the cell is confined. A nonzero value indicates that the cell is convertible.
 		panic(err)
+	}
+	idomain, icelltype := make([]int, nc), make([]int, nc)
+	for i := range idomain32 {
+		idomain[i] = int(idomain32[i])
+		icelltype[i] = int(icelltype32[i])
 	}
 
 	vert := make([][2]float64, nvert)
@@ -62,6 +68,10 @@ func ReadGRBU(buf *bytes.Reader) ([]*mmaths.Prism, [][]int, []JAxr) {
 	celly := make([]float64, nc)
 	iavert := make([]int32, nc)
 	if err := binary.Read(buf, binary.LittleEndian, vert); err != nil {
+		if err == io.EOF {
+			fmt.Println(" ** WARNING: geometry not included in .grb, will have to build from other sources **")
+			return nil, nil, nil, idomain, icelltype
+		}
 		panic(err)
 	}
 	if err := binary.Read(buf, binary.LittleEndian, cellx); err != nil {
@@ -75,10 +85,10 @@ func ReadGRBU(buf *bytes.Reader) ([]*mmaths.Prism, [][]int, []JAxr) {
 	}
 
 	var njavert int32
+	javert := make([]int32, njavert-1)
 	if err := binary.Read(buf, binary.LittleEndian, &njavert); err != nil {
 		panic(err)
 	}
-	javert := make([]int32, njavert-1)
 	if err := binary.Read(buf, binary.LittleEndian, javert); err != nil {
 		panic(err)
 	}
@@ -128,6 +138,7 @@ func ReadGRBU(buf *bytes.Reader) ([]*mmaths.Prism, [][]int, []JAxr) {
 					From:     int(a[0]) - 1,
 					To:       int(a[j]) - 1,
 					Position: j,
+					ID:       cja,
 				}
 				cja++
 			}
@@ -233,5 +244,5 @@ func ReadGRBU(buf *bytes.Reader) ([]*mmaths.Prism, [][]int, []JAxr) {
 	// 	log.Fatalf("Fatal error: readGRB connectivity check 007 failed, number of connections created (%d) not equal to NJA (less number of cells)\n", len(jaxrOut))
 	// }
 
-	return prsms, conn, jaxr
+	return prsms, conn, jaxr, idomain, icelltype
 }

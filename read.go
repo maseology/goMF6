@@ -15,7 +15,11 @@ func ReadMF6(fprfx string) MF6 {
 			panic("ReadMODFLOW: no grb found")
 		}
 	}
-	pset, conn, jaxr := readGRB(grbfp)
+	pset, conn, jaxr, idomain, icelltype := readGRB(grbfp)
+
+	if pset == nil {
+		pset, conn, jaxr = readers.GetExternalUgridBinary(fprfx + ".disu.bin") // created using buildUgridToBinary.py
+	}
 
 	// collect fluxes
 	fpcbc := fmt.Sprintf("%s.cbb", fprfx)
@@ -28,7 +32,7 @@ func ReadMF6(fprfx string) MF6 {
 			}
 		}
 	}
-	pflx, pqw := readCBB(fpcbc, jaxr, len(pset))
+	pflx, pqw := readCBB(fpcbc, jaxr, pset)
 
 	// convert prism type
 	mfpset := make([]*mf6prism, len(pset))
@@ -64,5 +68,7 @@ func ReadMF6(fprfx string) MF6 {
 			}
 			return zc
 		}(),
+		Idomain:   idomain,
+		Icelltype: icelltype,
 	}
 }
